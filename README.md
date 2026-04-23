@@ -3,7 +3,7 @@
 ![React](https://img.shields.io/badge/react-18.x-blue)
 ![Neo4j](https://img.shields.io/badge/neo4j-GraphDB-green)
 
-# EduNexus v2
+# EduNexus
 
 **A Knowledge Graph-Powered Platform for Skill Gap Analysis and Educational Alignment**
 
