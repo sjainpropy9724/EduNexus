@@ -1,0 +1,103 @@
+version: '3.8'
+
+# ============================================================
+#  EduNexus V2 — Fully isolated from V1
+#  V1 ports: 7474, 7687, 6379, 5555
+#  V2 ports: 7475, 7688, 6380, 5556, 8001, 5174
+#  V2 data:  ./data/neo4j_v2  and  ./data/redis_v2
+# ============================================================
+
+services:
+
+  # 1. Knowledge Graph (Neo4j) — V2 isolated instance
+  neo4j_v2:
+    image: neo4j:5.15.0-community
+    container_name: edunexus_v2_graph
+    ports:
+      - "7475:7474"   # Browser  → visit http://localhost:7475
+      - "7688:7687"   # Bolt     → bolt://localhost:7688
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-password123}
+      NEO4J_dbms_memory_pagecache_size: 2G
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - ./data/neo4j_v2:/data
+    networks:
+      - edunexus_v2_net
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD:-password123}", "RETURN 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # 2. Message Broker (Redis) — V2 isolated instance
+  redis_v2:
+    image: redis:7.2-alpine
+    container_name: edunexus_v2_broker
+    ports:
+      - "6380:6379"   # Redis → localhost:6380
+    volumes:
+      - ./data/redis_v2:/data
+    networks:
+      - edunexus_v2_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 3. Celery Task Monitor (Flower)
+  flower_v2:
+    image: mher/flower
+    container_name: edunexus_v2_monitor
+    environment:
+      CELERY_BROKER_URL: redis://redis_v2:6379/0
+    ports:
+      - "5556:5555"   # Flower → http://localhost:5556
+    depends_on:
+      - redis_v2
+    networks:
+      - edunexus_v2_net
+
+  # 4. FastAPI Backend
+  # Uncomment once you have a Dockerfile for the backend
+  # backend_v2:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: edunexus_v2_backend
+  #   ports:
+  #     - "8001:8000"   # API → http://localhost:8001
+  #   env_file:
+  #     - .env.v2
+  #   depends_on:
+  #     neo4j_v2:
+  #       condition: service_healthy
+  #     redis_v2:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./backend:/app
+  #     - ./uploads_v2:/app/uploads
+  #   networks:
+  #     - edunexus_v2_net
+
+  # 5. React Frontend
+  # Uncomment once you have a Dockerfile for the frontend
+  # frontend_v2:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: edunexus_v2_frontend
+  #   ports:
+  #     - "5174:5173"   # Vite dev server → http://localhost:5174
+  #   environment:
+  #     VITE_API_URL: http://localhost:8001
+  #   depends_on:
+  #     - backend_v2
+  #   networks:
+  #     - edunexus_v2_net
+
+networks:
+  edunexus_v2_net:
+    driver: bridge
+    name: edunexus_v2_net

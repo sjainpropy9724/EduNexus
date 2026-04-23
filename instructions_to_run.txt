@@ -1,0 +1,25 @@
+1. Install Docker Desktop and start it.
+2. Then be in the directory where docker-compose.yml file is there.
+3. Open a terminal here and run "docker-compose up -d"
+4. Then navigate to /backend folder and create a venv here.
+5. Activate the venv and then run "pip install -r requirements.txt"
+
+
+Now, we have to build the graph first.
+1. Open a terminal in /backend folder and run "python bulk_upload_jobs.py"
+2. Then in the same terminal run "python bulk_upload_syllabus.py"   
+         ---- this will take an hour approx to complete the processing of all files
+3. Graph is now created.
+
+Now the simulation time.
+1. Open 4 different terminals in /backend and run the below commands in the same order 1 by 1.
+    i.   docker-compose up -d
+    ii.  uvicorn app.main:app --reload --port 8001
+    iii. celery -A app.core.celery_app worker --loglevel=info -P solo
+    iv.  celery -A app.core.celery_app beat --loglevel=info
+    v.   python simulate_market.py
+
+2. Open 1 terminal in /frontend folder and run the below command
+    i. npm run dev -- --port 5174
+
+3. Notice the outputs on the frontend and the terminals.
